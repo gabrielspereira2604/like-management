@@ -88,4 +88,12 @@ O modelo atual guarda apenas o contador por post, sem registrar qual usuário cu
 - Não há como auditar quem curtiu
 - Um usuário pode curtir várias vezes
 
-Para impedir curtidas duplicadas seria necessário uma tabela `Likes (PostId, UserId)` com unique constraint, mantendo o `LikeCount` como cache desnormalizado para leitura rápida.
+Para impedir curtidas duplicadas seria necessário uma abordagem híbrida: uma tabela `Likes (PostId, UserId)` com unique constraint para controlar quem curtiu, e o `LikeCount` em `Posts` mantido como cache desnormalizado para leitura rápida.
+
+O fluxo ao curtir seria:
+
+1. Tenta inserir em `Likes (PostId, UserId)` — a unique constraint barra duplicata
+2. Se inseriu com sucesso → executa `UPDATE Posts SET LikeCount = LikeCount + 1` atomicamente
+3. Se já existia → retorna 409 Conflict (usuário já curtiu)
+
+Dessa forma a leitura do contador continua O(1) (lê direto de `Posts.LikeCount`), mas agora é possível auditar quem curtiu e garantir que cada usuário curta apenas uma vez. O risco é manter `LikeCount` em sincronia com o `COUNT(*)` real da tabela `Likes` — se um bug inserir na `Likes` sem incrementar o contador, os valores ficam dessincronizados.
