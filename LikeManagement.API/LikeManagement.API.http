@@ -1,0 +1,6 @@
+@LikeManagement.API_HostAddress = http://localhost:5094
+
+GET {{LikeManagement.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
